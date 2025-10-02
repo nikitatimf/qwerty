@@ -1,6 +1,8 @@
 ﻿#include <iostream>
 #include <windows.h>
-#include <string>
+#include "json.hpp"
+#include <fstream>
+using json = nlohmann::json;
 using namespace std;
 
 // Функция для выравнивания по центру
@@ -23,6 +25,7 @@ using namespace std;
 struct characteristicsOfTheLabyrinth {
 	short labyrinthWidth = 100;
 	short labyrinthHeight = 20;
+	string complexity = "Легко";
 } charLab;
 
 
@@ -36,22 +39,28 @@ int getConsoleHeight();
 void clearCursor();
 
 // Функция для отображения главного меню.
-void mainMenu(short& labyrinthWidth, short& labyrinthHeight);
+void mainMenu();
 
 // Функция для отслеживания нажатий кнопок в главном меню.
 short clickButton();
 
 // Функция окна, появляющегося после выбора "Начать игру".
-void startGame(short& labyrinthWidth, short& labyrinthHeight);
+void startGame();
 
 // Функция окна "Загрузить игру".
-void loadGame(short& labyrinthWeight, short& labyrinthHeight);
+void loadGame();
 
 // Функция окна "Настройки".
-void settings(short& labyrinthWeight, short& labyrinthHeight);
+void settings();
 
 // Функция окна "О программе".
-void aboutProgramm(short& labyrinthWidth, short& labyrinthHeight);
+void aboutProgramm();
+
+// Функция для начала работы с файлом.
+void fileStart();
+
+// Функция для конца работы с файлом.
+void fileEnd();
 
 // Функция, проверяющая, была ли отпущена клавиша Enter, S, W.
 // Если была отпущена - возвращается 0, иначе - 1.
@@ -63,8 +72,9 @@ short was_passed_button();
 
 
 int main() {
-	short labyrinthWidth = 100;
-	short labyrinthHeight = 20;
+	
+
+	fileStart();
 
 	clearCursor();
 	cout << "Для начала игры нажмите кнопку F11";
@@ -75,7 +85,7 @@ int main() {
 		}
 	}
 
-	mainMenu(labyrinthWidth, labyrinthHeight);
+	mainMenu();
 	
 	while (true) {
 		int c = 0;
@@ -115,7 +125,7 @@ void clearCursor() {
 }
 
 // Функция для отображения главного меню.
-void mainMenu(short &labyrinthWidth, short &labyrinthHeight) {
+void mainMenu() {
 	printCenter("Побег из лабиринта", true);
 	cout << endl;
 	printCenter("1. Начать игру");
@@ -131,22 +141,23 @@ void mainMenu(short &labyrinthWidth, short &labyrinthHeight) {
 	short whatButtonWasClicked = clickButton();
 	switch (whatButtonWasClicked) {
 	case 1: {
-		startGame(labyrinthWidth, labyrinthHeight);
+		startGame();
 		break;
 	}
 	case 2: {
-		loadGame(labyrinthWidth, labyrinthHeight);
+		loadGame();
 		break;
 	}
 	case 3: {
-		settings(labyrinthWidth, labyrinthHeight);
+		settings();
 		break;
 	}
 	case 4: {
-		aboutProgramm(labyrinthWidth, labyrinthHeight);
+		aboutProgramm();
 		break;
 	}
 	case 5: {
+		fileEnd();
 		exit(0);
 	}
 	}
@@ -183,7 +194,7 @@ short clickButton() {
 }
 
 // Функция окна, появляющегося после выбора "Начать игру".
-void startGame(short& labyrinthWidth, short& labyrinthHeight) {
+void startGame() {
 	system("cls");
 	cout << R"(Начало игры
 Для выхода в главное меню нажмите 1)";
@@ -195,11 +206,11 @@ void startGame(short& labyrinthWidth, short& labyrinthHeight) {
 			}
 		}
 	}
-	mainMenu(labyrinthWidth, labyrinthHeight);
+	mainMenu();
 }
 
 // Функция окна "Загрузить игру"
-void loadGame(short& labyrinthWidth, short& labyrinthHeight) {
+void loadGame() {
 	system("cls");
 	cout << R"(Функция на данный момент не доступна.
 Для выхода в главное меню нажмите 2)";
@@ -211,11 +222,11 @@ void loadGame(short& labyrinthWidth, short& labyrinthHeight) {
 			}
 		}
 	}
-	mainMenu(labyrinthWidth, labyrinthHeight);
+	mainMenu();
 }
 
 // Функция окна "Настройки".
-void settings(short& labyrinthWidth, short& labyrinthHeight) {
+void settings() {
 
 	bool isLeft = false;
 	while (true) {
@@ -235,7 +246,7 @@ void settings(short& labyrinthWidth, short& labyrinthHeight) {
 		SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
 		cout << "Размер лабиринта - ";
-		cout << labyrinthWidth << "x" << labyrinthHeight;
+		cout << charLab.labyrinthWidth << "x" << charLab.labyrinthHeight;
 
 		if (isLeft) {
 			cout << " +";
@@ -248,10 +259,7 @@ void settings(short& labyrinthWidth, short& labyrinthHeight) {
 
 		cout << endl;
 		printCenter("Сложность: ");
-		cout << (labyrinthWidth == 100 ? "Легко" : 
-			labyrinthWidth == 130 ? "Средне" : 
-			labyrinthWidth == 160 ? "Сложно" : 
-			"Невозможно");
+		cout << charLab.complexity;
 
 		if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
 			if (!was_passed_button()) {
@@ -266,22 +274,30 @@ void settings(short& labyrinthWidth, short& labyrinthHeight) {
 			isLeft = true;
 		}
 		else if (GetAsyncKeyState(VK_RETURN) & 0x8000) {
-			if (isLeft && labyrinthWidth != 100) {
-				labyrinthWidth -= 30;
-				labyrinthHeight -= 4;
+			if (isLeft && charLab.labyrinthWidth != 100) {
+				charLab.labyrinthWidth -= 30;
+				charLab.labyrinthHeight -= 4;
+				charLab.complexity = charLab.labyrinthWidth == 100 ? "Легко" :
+					charLab.labyrinthWidth == 130 ? "Средне" :
+					charLab.labyrinthWidth == 160 ? "Сложно" :
+					"Невозможно";
 			}
-			else if (!isLeft && labyrinthWidth < 190) {
-				labyrinthWidth += 30;
-				labyrinthHeight += 4;
+			else if (!isLeft && charLab.labyrinthWidth < 190) {
+				charLab.labyrinthWidth += 30;
+				charLab.labyrinthHeight += 4;
+				charLab.complexity = charLab.labyrinthWidth == 100 ? "Легко" :
+					charLab.labyrinthWidth == 130 ? "Средне" :
+					charLab.labyrinthWidth == 160 ? "Сложно" :
+					"Невозможно";
 			}
 		}
 		Sleep(100);
 	}
-	mainMenu(labyrinthWidth, labyrinthHeight);
+	mainMenu();
 }
 
 // Функция окна "О программе".
-void aboutProgramm(short& labyrinthWidth, short& labyrinthHeight) {
+void aboutProgramm() {
 	system("cls");
 	cout << R"(Версия программы: 1.0.
 Выполнил: Никита Довгун
@@ -294,7 +310,55 @@ void aboutProgramm(short& labyrinthWidth, short& labyrinthHeight) {
 			}
 		}
 	}
-	mainMenu(labyrinthWidth, labyrinthHeight);
+	mainMenu();
+}
+
+// Функция для работы с файлом.
+void fileStart() {
+	const string PATH = "settings.json";
+	fstream file(PATH, ios::in);
+	if (!file.is_open()) {
+		file.open(PATH, ios::out);
+		if (!file.is_open()) {
+			cout << "Ошибка при запуске приложения! Повторите попытку.";
+			exit(0);
+		}
+		json data;
+		data["labyrinthWidth"] = 100;
+		data["labyrinthHeight"] = 20;
+		data["complexity"] = "Легко";
+
+		file << data.dump(4);	
+		file.close();
+	}
+	else {
+		json data;
+		file >> data;
+		file.close();
+		charLab.labyrinthHeight = data["labyrinthHeight"];
+		charLab.labyrinthWidth = data["labyrinthWidth"];
+		charLab.complexity = data["complexity"];
+	}
+}
+
+// Функция для конца работы с файлом.
+void fileEnd() {
+	const string PATH = "settings.json";
+	json data;
+
+	data["labyrinthWidth"] = charLab.labyrinthWidth;
+	data["labyrinthHeight"] = charLab.labyrinthHeight;
+	data["complexity"] = charLab.complexity;
+
+	fstream file(PATH);
+	if (!file.is_open()) {
+		cout << "Ошибка сохранения";
+		exit(0);
+	}
+
+	file << data.dump(4);
+	file.close();
+
 }
 
 // Функция, проверяющая, была ли отпущена клавиша Enter, S, W.
